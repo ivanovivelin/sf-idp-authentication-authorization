@@ -49,6 +49,7 @@ app.get('/login', async (req, res) => {
  * Callback endpoint that requests an Access Token
  */
 app.get('/oauthcallback', async (req, res) => {
+    console.log(req.query.code);
     const authRequest = {
         method: "POST",
         uri: nconf.get("SF_ORG_AUTH_TOKEN_ENDPOINT"), // update for config val
@@ -64,8 +65,39 @@ app.get('/oauthcallback', async (req, res) => {
     console.log(sfResponse);
     res.json({
         access_token: sfResponse.access_token
-    })
+    });
 });
+
+/**
+ * SAML Callback
+ * 
+ */
+app.get('/customer/login', async (req, res) => {
+  //res.redirect(`https://dev2-btpocx.cs126.force.com/btcustomer/login`);
+  res.redirect(`${nconf.get('SF_COMMUNINITY_INSTANCE')}/services/oauth2/authorize?client_id=${nconf.get('SF_CONNECTED_APP_CUSTOMER_CLIENT_ID')}
+    &redirect_uri=${nconf.get('SF_CUSTOMER_CALLBACK_URL')}&response_type=code`)
+});
+
+app.get('/customer/oauthcallback', async (req, res) => {
+  console.log(req.query.code);
+  const authRequest = {
+      method: "POST",
+      uri: nconf.get("SF_ORG_AUTH_TOKEN_ENDPOINT"), // update for config val
+      form: {
+        grant_type: "authorization_code",
+        code: req.query.code,
+        client_id: nconf.get('SF_CONNECTED_APP_CUSTOMER_CLIENT_ID'),
+        client_secret: nconf.get('SF_CONNECTED_APP_CUSTOMER_SECRET'),
+        redirect_uri: 'http://localhost:3005/oauthcallback'
+      },
+  };
+  const sfResponse = JSON.parse(await request(authRequest));
+  console.log(sfResponse);
+  res.json({
+      access_token: sfResponse.access_token
+  });
+});
+
 
 var server = http.createServer(app);
 
